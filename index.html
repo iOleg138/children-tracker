@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Дневник</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     РОДИТЕЛЬСКИЙ ИНТЕРФЕЙС
+     ============================================================ -->
+<div id="parentApp" class="hidden">
+  <div class="container">
+    <div class="header">
+      <h1>📋 Дневник</h1>
+      <div class="header-actions">
+        <div id="childSelector" class="child-selector"></div>
+        <button class="btn-secondary btn-sm" onclick="Parent.logout()">Выйти</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="mark">Отметки</button>
+      <button class="tab" data-tab="bonuses">Предложения <span id="bonusBadge" class="hidden" style="background:#c53030;color:#fff;padding:1px 7px;border-radius:10px;font-size:11px;"></span></button>
+      <button class="tab" data-tab="settings">Настройки</button>
+      <button class="tab" data-tab="archive">Архив</button>
+      <button class="tab" data-tab="analytics">Аналитика</button>
+      <button class="tab" data-tab="notifications">Уведомления <span id="notifBadge" class="hidden" style="background:#c53030;color:#fff;padding:1px 7px;border-radius:10px;font-size:11px;"></span></button>
+    </div>
+
+    <div id="tabContent"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ДЕТСКИЙ ИНТЕРФЕЙС
+     ============================================================ -->
+<div id="childApp" class="hidden">
+  <div class="container">
+    <div class="child-header">
+      <h1 id="childGreeting">Привет! 👋</h1>
+      <p class="muted" id="childDate"></p>
+    </div>
+    <div id="childContent"></div>
+  </div>
+</div>
+
+<!-- ЛОГИН -->
+<div id="loginScreen" class="login">
+  <h1>🔒 Вход</h1>
+  <p class="muted">Введите пароль родителя</p>
+  <input type="password" id="passwordInput" placeholder="Пароль" autocomplete="current-password">
+  <button class="btn-primary btn-block" id="loginBtn">Войти</button>
+  <div id="loginError" class="login__err hidden">Неверный пароль</div>
+</div>
+
+<!-- МОДАЛКА -->
+<div id="modal" class="modal hidden">
+  <div class="modal__backdrop" onclick="Modal.close()"></div>
+  <div class="modal__window">
+    <h2 class="modal__title" id="modalTitle"></h2>
+    <div class="modal__body" id="modalBody"></div>
+    <div class="modal__actions" id="modalActions"></div>
+  </div>
+</div>
+
+<!-- ТОСТ -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

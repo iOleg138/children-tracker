@@ -43,3 +43,8 @@ code{display:block;margin-top:4px;font-size:12px;user-select:all}
 #toast.bad{background:var(--bad)}
 #toast.show{opacity:1}
 .badge{background:var(--bad);color:#fff;border-radius:9px;padding:0 6px;margin-left:4px;font-size:12px}
+.pen-table{width:100%;border-collapse:collapse;font-size:14px}
+.pen-table th{text-align:left;font-size:12px;color:var(--mut);padding:6px 4px;border-bottom:1px solid #8883;font-weight:600}
+.pen-table td{padding:6px 4px;border-bottom:1px solid #8882;vertical-align:top}
+.pen-table tr:last-child td{border-bottom:0}
+.pen-table td:first-child{white-space:nowrap;color:var(--mut);font-size:13px}

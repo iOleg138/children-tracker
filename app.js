@@ -203,6 +203,7 @@ function login(msg) {
   $('#app').innerHTML = `<div class="card login"><h3>Вход для родителя</h3>${msg ? `<div class="err">${esc(msg)}</div>` : ''}<input id="pw" type="password" placeholder="Пароль"><button id="go">Войти</button></div>`;
   const go = () => { sessionStorage.setItem('pw', $('#pw').value); start(); };
   $('#go').onclick = go; $('#pw').onkeydown = e => e.key == 'Enter' && go();
+  setTimeout(() => document.getElementById('pw').focus(), 0);
 }
 async function start() {
   if (!CH && !PW()) return login();

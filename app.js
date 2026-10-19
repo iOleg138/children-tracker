@@ -1,6 +1,6 @@
 /* ===== Конфигурация ===== */
 const CFG = {
-  URL: 'https://script.google.com/macros/s/AKfycbyUUQtVkboc1vMkDogRfguWbfHcnfjyWkzpFp9i3ZJ4lYWS61CzqiLsawGPi7HitEsWIw/exec',
+  URL: 'https://script.google.com/macros/s/AKfycbzqkP6InjccOJegUZsnfkmsPGSIAy0-r2IA616smiWuxT8rM5b2fdvMcGBUc23wQhkJtA/exec',
   BASE: 21, FLOOR: -15,
   EMOJI: ['🎯', '🏆', '🎮', '🎀', '🚲', '🍦', '📱', '🐶'],
   LEVELS: ['Новичок', 'Ученик', 'Мастер', 'Эксперт', 'Чемпион'],
@@ -17,6 +17,7 @@ const J = (s, d) => { try { return JSON.parse(s) || d; } catch (e) { return d; }
 const levelIdx = (sum, goal) => goal > 0 ? Math.max(0, Math.min(4, Math.floor(sum / goal * 5))) : 0;
 const pctOf = (sum, goal) => goal > 0 ? Math.max(0, Math.min(100, Math.round(sum / goal * 100))) : 0;
 const fail = m => { throw new Error(m); };
+const ddmm = v => { const s = ymd(v); return s ? s.slice(8, 10) + '.' + s.slice(5, 7) : ''; };
 
 /* ===== API-слой ===== */
 const CH = new URLSearchParams(location.search).get('child');
@@ -182,6 +183,54 @@ const sendBonus = () => modal('Что ты сделала сверх нормы?
   return post('save', 'bonuses', { id: uid(), childId: S.child, periodId: active().id, date: today(), text: o.text, points: Math.abs(Number(o.points) || 0), status: 'new' });
 });
 const imDone = () => act(() => post('save', 'notifications', { id: uid(), childId: S.child, periodId: active().id, status: 'new', created: today() }), 'Родитель получил сообщение!');
+
+/* ===== Таблица нарушений ребёнка ===== */
+function renderChildPenalties(p) {
+  const ds = days(p).filter(d => {
+    const pens = J(d.penalties, []);
+    const exts = J(d.extra, []);
+    return pens.length > 0 || exts.length > 0;
+  }).sort((a, b) => ymd(b.date).localeCompare(ymd(a.date)));
+
+  if (ds.length === 0) {
+    return `<h4>📋 Мои нарушения</h4><div class="card"><p style="margin:0;color:var(--mut)">Пока нет нарушений — так держать! 🎉</p></div>`;
+  }
+
+  const ms = mets(p);
+  const rows = [];
+
+  ds.forEach(d => {
+    const pens = J(d.penalties, []);
+    const exts = J(d.extra, []);
+
+    pens.forEach(id => {
+      const m = ms.find(x => x.id == id);
+      if (!m) return;
+      rows.push(`<tr>
+        <td>${ddmm(d.date)}</td>
+        <td>${esc(m.icon || '')} ${esc(m.name)}</td>
+        <td style="text-align:right;color:var(--bad);font-weight:600">${m.points}</td>
+      </tr>`);
+    });
+
+    exts.forEach(x => {
+      rows.push(`<tr>
+        <td>${ddmm(d.date)}</td>
+        <td>${esc(x.text)}</td>
+        <td style="text-align:right;color:var(--bad);font-weight:600">${x.points}</td>
+      </tr>`);
+    });
+  });
+
+  return `<h4>📋 Мои нарушения</h4>
+<div class="card" style="padding:8px 12px">
+<table class="pen-table">
+<thead><tr><th>Дата</th><th>Нарушение</th><th style="text-align:right">Баллы</th></tr></thead>
+<tbody>${rows.join('')}</tbody>
+</table>
+</div>`;
+}
+
 function renderChild() {
   const k = kid(), p = active();
   if (!k) { $('#app').innerHTML = '<p class="err">Ребёнок не найден</p>'; return; }
@@ -194,6 +243,7 @@ function renderChild() {
   const notified = (D.notifications || []).some(n => n.periodId == p.id && n.status != 'no');
   $('#app').innerHTML = `<h2>Привет, ${esc(k.name)}!</h2>${prog(p)}
 ${s >= Number(p.goal) && !notified ? '<button onclick="imDone()">🎉 Я справилась!</button>' : ''}
+${renderChildPenalties(p)}
 <h4>Календарь</h4><div class="cal">${cells.join('')}</div><p><button onclick="sendBonus()">⭐ Предложить бонус</button></p>`;
 }
 
@@ -203,7 +253,6 @@ function login(msg) {
   $('#app').innerHTML = `<div class="card login"><h3>Вход для родителя</h3>${msg ? `<div class="err">${esc(msg)}</div>` : ''}<input id="pw" type="password" placeholder="Пароль"><button id="go">Войти</button></div>`;
   const go = () => { sessionStorage.setItem('pw', $('#pw').value); start(); };
   $('#go').onclick = go; $('#pw').onkeydown = e => e.key == 'Enter' && go();
-  setTimeout(() => document.getElementById('pw').focus(), 0);
 }
 async function start() {
   if (!CH && !PW()) return login();
@@ -216,7 +265,7 @@ async function start() {
     }
     render();
   } catch (e) {
-    if (e.message == 'AUTH') { sessionStorage.removeItem('pw'); return login('Неверный пароль'); }
+    if (String(e.message).includes('AUTH')) { sessionStorage.removeItem('pw'); return login('Неверный пароль'); }
     $('#app').innerHTML = '<p class="err">Не удалось загрузить данные: ' + esc(e.message) + '</p>';
   }
 }

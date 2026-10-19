@@ -1,7 +1,3 @@
-/* ============================================================
-   CHILDREN TRACKER — стили
-   ============================================================ */
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -40,7 +36,6 @@ h3 { font-size: 15px; margin-bottom: 10px; }
 .mt { margin-top: 12px; }
 .mb { margin-bottom: 12px; }
 
-/* Кнопки */
 button {
   font-family: inherit;
   font-size: 14px;
@@ -63,7 +58,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-sm { padding: 6px 12px; font-size: 13px; }
 .btn-block { width: 100%; }
 
-/* Инпуты */
 input, select, textarea {
   font-family: inherit;
   font-size: 15px;
@@ -79,7 +73,6 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
 }
 
-/* Карточки */
 .card {
   background: var(--surface);
   border-radius: var(--radius);
@@ -88,7 +81,6 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 16px;
 }
 
-/* Шапка */
 .header {
   display: flex;
   justify-content: space-between;
@@ -104,7 +96,6 @@ input:focus, select:focus, textarea:focus {
   flex-wrap: wrap;
 }
 
-/* Вкладки */
 .tabs {
   display: flex;
   gap: 4px;
@@ -122,13 +113,15 @@ input:focus, select:focus, textarea:focus {
   font-weight: 500;
   white-space: nowrap;
   border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .tab.active {
   color: var(--primary);
   border-bottom-color: var(--primary);
 }
 
-/* Селектор ребёнка */
 .child-selector {
   display: flex;
   gap: 4px;
@@ -149,7 +142,6 @@ input:focus, select:focus, textarea:focus {
   color: #fff;
 }
 
-/* Календарь */
 .calendar-strip {
   display: flex;
   gap: 6px;
@@ -181,7 +173,6 @@ input:focus, select:focus, textarea:focus {
 .cal-day__dot.yellow { background: var(--warning); }
 .cal-day__dot.gray { background: #a0aec0; }
 
-/* Плитки метрик */
 .metric {
   display: flex;
   align-items: center;
@@ -208,7 +199,6 @@ input:focus, select:focus, textarea:focus {
 }
 .metric.selected .metric__points { background: #fed7d7; color: #742a2a; }
 
-/* Итог дня */
 .summary {
   position: sticky;
   bottom: 0;
@@ -237,7 +227,6 @@ input:focus, select:focus, textarea:focus {
 .summary__total { color: var(--primary); }
 .summary__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Список строк (для настроек) */
 .list-item {
   padding: 12px;
   border: 2px solid var(--border);
@@ -254,7 +243,6 @@ input:focus, select:focus, textarea:focus {
 .list-item__meta { font-size: 13px; color: var(--muted); }
 .list-item__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Бонусы */
 .bonus-card {
   background: var(--surface);
   border-left: 4px solid var(--warning);
@@ -298,7 +286,6 @@ input:focus, select:focus, textarea:focus {
   text-align: center;
 }
 
-/* Детская страница */
 .child-header {
   text-align: center;
   padding: 20px 0;
@@ -400,18 +387,6 @@ input:focus, select:focus, textarea:focus {
 .cal-cell.yellow { background: #fefcbf; color: #744210; }
 .cal-cell.red { background: #fed7d7; color: #742a2a; }
 
-.level-up {
-  background: linear-gradient(90deg, var(--success), var(--primary));
-  color: #fff;
-  padding: 16px;
-  border-radius: var(--radius);
-  text-align: center;
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-/* Модальное окно */
 .modal {
   position: fixed;
   inset: 0;
@@ -446,7 +421,6 @@ input:focus, select:focus, textarea:focus {
   flex-wrap: wrap;
 }
 
-/* Формы */
 .field { margin-bottom: 12px; }
 .field label {
   display: block;
@@ -456,7 +430,6 @@ input:focus, select:focus, textarea:focus {
   font-weight: 500;
 }
 
-/* Тост */
 .toast {
   position: fixed;
   bottom: 24px;
@@ -476,7 +449,6 @@ input:focus, select:focus, textarea:focus {
 .toast--error { background: var(--danger); }
 .toast--info { background: #2d3748; }
 
-/* Логин */
 .login {
   max-width: 320px;
   margin: 80px auto;
@@ -489,7 +461,6 @@ input:focus, select:focus, textarea:focus {
 .login input { margin: 12px 0; }
 .login__err { color: var(--danger); font-size: 14px; margin-top: 8px; }
 
-/* Адаптив */
 @media (max-width: 480px) {
   body { padding: 10px; }
   h1 { font-size: 18px; }

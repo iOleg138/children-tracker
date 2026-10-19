@@ -1,6 +1,6 @@
 /* ===== Конфигурация ===== */
 const CFG = {
-  URL: 'https://script.google.com/macros/s/AKfycbzqkP6InjccOJegUZsnfkmsPGSIAy0-r2IA616smiWuxT8rM5b2fdvMcGBUc23wQhkJtA/exec',
+  URL: 'https://script.google.com/macros/s/AKfycbyUUQtVkboc1vMkDogRfguWbfHcnfjyWkzpFp9i3ZJ4lYWS61CzqiLsawGPi7HitEsWIw/exec',
   BASE: 21, FLOOR: -15,
   EMOJI: ['🎯', '🏆', '🎮', '🎀', '🚲', '🍦', '📱', '🐶'],
   LEVELS: ['Новичок', 'Ученик', 'Мастер', 'Эксперт', 'Чемпион'],

@@ -1,6 +1,6 @@
 /* ===== Конфигурация ===== */
 const CFG = {
-  URL: 'https://script.google.com/macros/s/AKfycbyUUQtVkboc1vMkDogRfguWbfHcnfjyWkzpFp9i3ZJ4lYWS61CzqiLsawGPi7HitEsWIw/exec',
+  URL: 'https://script.google.com/macros/s/AKfycbzqkP6InjccOJegUZsnfkmsPGSIAy0-r2IA616smiWuxT8rM5b2fdvMcGBUc23wQhkJtA/exec',
   BASE: 21, FLOOR: -15,
   EMOJI: ['🎯', '🏆', '🎮', '🎀', '🚲', '🍦', '📱', '🐶'],
   LEVELS: ['Новичок', 'Ученик', 'Мастер', 'Эксперт', 'Чемпион'],
@@ -10,14 +10,32 @@ const CFG = {
 /* ===== Утилиты ===== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const ymd = v => { const m = String(v || '').match(/^\d{4}-\d{2}-\d{2}/); return m ? m[0] : ''; };
+const ymd = v => {
+  if (!v) return '';
+  if (v instanceof Date) {
+    const y = v.getFullYear(), m = String(v.getMonth() + 1).padStart(2, '0'), d = String(v.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+  const s = String(v);
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[0];
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    const y = d.getFullYear(), mo = String(d.getMonth() + 1).padStart(2, '0'), da = String(d.getDate()).padStart(2, '0');
+    return y + '-' + mo + '-' + da;
+  }
+  return '';
+};
 const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 const J = (s, d) => { try { return JSON.parse(s) || d; } catch (e) { return d; } };
 const levelIdx = (sum, goal) => goal > 0 ? Math.max(0, Math.min(4, Math.floor(sum / goal * 5))) : 0;
 const pctOf = (sum, goal) => goal > 0 ? Math.max(0, Math.min(100, Math.round(sum / goal * 100))) : 0;
 const fail = m => { throw new Error(m); };
-const ddmm = v => { const s = ymd(v); return s ? s.slice(8, 10) + '.' + s.slice(5, 7) : ''; };
+const ddmm = v => {
+  const s = ymd(v);
+  return s ? s.slice(8, 10) + '.' + s.slice(5, 7) : '';
+};
 
 /* ===== API-слой ===== */
 const CH = new URLSearchParams(location.search).get('child');
@@ -48,8 +66,8 @@ const mets = p => (D.metrics || []).filter(m => m.childId == S.child && m.period
 const days = p => (D.days || []).filter(d => d.childId == S.child && d.periodId == p.id);
 const sum = p => days(p).reduce((a, d) => a + Number(d.total || 0), 0);
 function getDay(p, date) {
-  const r = days(p).find(d => ymd(d.date) == date);
-  return { childId: S.child, periodId: p.id, date, penalties: J(r && r.penalties, []), extra: J(r && r.extra, []), bonuses: J(r && r.bonuses, []), closed: r ? r.closed : 'false' };
+  const r = days(p).find(d => ymd(d.date) == ymd(date));
+  return { childId: S.child, periodId: p.id, date: ymd(date), penalties: J(r && r.penalties, []), extra: J(r && r.extra, []), bonuses: J(r && r.bonuses, []), closed: r ? r.closed : 'false' };
 }
 function calc(p, d) {
   const k = kid(), ms = mets(p);
@@ -136,6 +154,32 @@ const fillCatalog = () => act(async () => {
 }, 'Справочник заполнен');
 
 const line = (txt, pts, id, ed, del) => `<div class="line"><span class="grow">${txt}</span><b>${pts}</b><a onclick="${ed}('${id}')">✎</a><a onclick="${del}('${id}')">✕</a></div>`;
+
+/* ===== Список отмеченного за день (родитель) ===== */
+function renderDaySummary(p, d) {
+  const ms = mets(p);
+  const items = [];
+
+  d.penalties.forEach(id => {
+    const m = ms.find(x => x.id == id);
+    if (m) items.push(`<div class="line"><span class="grow">${esc(m.icon || '')} ${esc(m.name)}</span><b style="color:var(--bad)">${m.points}</b></div>`);
+  });
+
+  d.extra.forEach(x => {
+    items.push(`<div class="line"><span class="grow">➕ ${esc(x.text)}</span><b style="color:var(--bad)">${x.points}</b></div>`);
+  });
+
+  d.bonuses.forEach(b => {
+    items.push(`<div class="line"><span class="grow">⭐ ${esc(b.text)}</span><b style="color:var(--ok)">+${b.points}</b></div>`);
+  });
+
+  if (items.length === 0) {
+    return `<h4>📌 Отмечено за ${ddmm(S.date)}</h4><div class="card"><p style="margin:0;color:var(--mut)">Пока ничего не отмечено</p></div>`;
+  }
+
+  return `<h4>📌 Отмечено за ${ddmm(S.date)}</h4><div class="card">${items.join('')}</div>`;
+}
+
 const P = {
   marks(k, p) {
     if (!p) return '<p>Нет активного периода — создайте и активируйте его в «Настройках».</p>';
@@ -145,7 +189,8 @@ const P = {
 ${d.extra.map((x, i) => `<div class="line"><span class="grow">${esc(x.text)}</span><b>${x.points}</b><a onclick="delExtra(${i})">✕</a></div>`).join('')}
 <div class="row"><button class="sec" onclick="addExtra()">+ Прочий штраф</button></div></div>
 ${d.bonuses.length ? `<div class="card">${d.bonuses.map(b => `<div class="line"><span class="grow">⭐ ${esc(b.text)}</span><b>+${b.points}</b></div>`).join('')}</div>` : ''}
-<p class="tot">Итог дня: ${tot} ${d.closed == 'true' ? '✔' : ''}</p><button onclick="closeDay()">${d.closed == 'true' ? 'Открыть день' : 'Закрыть день'}</button>`;
+<p class="tot">Итог дня: ${tot} ${d.closed == 'true' ? '✔' : ''}</p><button onclick="closeDay()">${d.closed == 'true' ? 'Открыть день' : 'Закрыть день'}</button>
+${renderDaySummary(p, d)}`;
   },
   bonus() { const b = pendB(); return b.length ? b.map(x => `<div class="card">${esc(ymd(x.date))}: ${esc(x.text)} <b>+${x.points}</b><div class="row"><button onclick="okB('${x.id}')">Принять</button><button class="sec" onclick="editB('${x.id}')">Изменить</button><button class="sec" onclick="noB('${x.id}')">Отклонить</button></div></div>`).join('') : '<p>Нет предложений</p>'; },
   notes(k) { const n = pendN(); return n.length ? n.map(x => `<div class="card">🎉 ${esc(k.name)} справилась с целью! (${x.status == 'later' ? 'отложено' : 'новое'})<div class="row"><button onclick="nst('${x.id}','ok')">Подтвердить</button><button class="sec" onclick="nst('${x.id}','later')">Отложить</button><button class="sec" onclick="nst('${x.id}','no')">Отклонить</button></div></div>`).join('') : '<p>Нет уведомлений</p>'; },
@@ -234,14 +279,16 @@ function renderChildPenalties(p) {
 function renderChild() {
   const k = kid(), p = active();
   if (!k) { $('#app').innerHTML = '<p class="err">Ребёнок не найден</p>'; return; }
-  if (!p) { $('#app').innerHTML = `<h2>Привет, ${esc(k.name)}!</h2><p>Пока нет активного периода.</p>`; return; }
+  if (!p) { $('#app').innerHTML = `<h2>Привет, ${esc(k.name)}!</h2><p class="muted">Сегодня: ${ddmm(today())}</p><p>Пока нет активного периода.</p>`; return; }
   const s = sum(p), cells = [];
   for (let t = Date.parse(ymd(p.start)), i = 0; t <= Date.parse(ymd(p.end)) && i < 100; t += 864e5, i++) {
     const dt = new Date(t).toISOString().slice(0, 10), r = days(p).find(d => ymd(d.date) == dt);
     cells.push(`<div>${dt.slice(8)}<b>${r ? r.total : '·'}</b></div>`);
   }
   const notified = (D.notifications || []).some(n => n.periodId == p.id && n.status != 'no');
-  $('#app').innerHTML = `<h2>Привет, ${esc(k.name)}!</h2>${prog(p)}
+  $('#app').innerHTML = `<h2>Привет, ${esc(k.name)}!</h2>
+<p class="muted">Сегодня: ${ddmm(today())}</p>
+${prog(p)}
 ${s >= Number(p.goal) && !notified ? '<button onclick="imDone()">🎉 Я справилась!</button>' : ''}
 ${renderChildPenalties(p)}
 <h4>Календарь</h4><div class="cal">${cells.join('')}</div><p><button onclick="sendBonus()">⭐ Предложить бонус</button></p>`;

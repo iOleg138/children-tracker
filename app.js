@@ -4,7 +4,7 @@
 
 const CONFIG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbwY0Y4t7ALcGFKVXddVHHkMjtXEwoOpoNLNgZwqrHD9fYbqU0Fdy9Xg4WpLUo1s0N7J/exec",
-  parentPassword: "ulyana2024",
+  parentPassword: "Oleg2026!",
 
   baseDay: 21,
   floor: -15,

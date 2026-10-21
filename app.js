@@ -1,6 +1,6 @@
 /* ===== Конфигурация ===== */
 const CFG = {
-  URL: 'https://script.google.com/macros/s/AKfycbyUUQtVkboc1vMkDogRfguWbfHcnfjyWkzpFp9i3ZJ4lYWS61CzqiLsawGPi7HitEsWIw/exec',
+  URL: 'https://script.google.com/macros/s/AKfycbzqkP6InjccOJegUZsnfkmsPGSIAy0-r2IA616smiWuxT8rM5b2fdvMcGBUc23wQhkJtA/exec',
   BASE: 21, FLOOR: -15,
   EMOJI: ['🎯', '🏆', '🎮', '🎀', '🚲', '🍦', '📱', '🐶'],
   LEVELS: ['Новичок', 'Ученик', 'Мастер', 'Эксперт', 'Чемпион'],
@@ -19,6 +19,13 @@ const ymd = v => {
   const s = String(v);
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return m[0];
+  m = s.match(/(\w{3})\s+(\w{3})\s+(\d{1,2})\s+(\d{4})/);
+  if (m) {
+    const months = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+    const mo = months[m[2]];
+    const da = String(m[3]).padStart(2, '0');
+    if (mo) return m[4] + '-' + mo + '-' + da;
+  }
   const d = new Date(s);
   if (!isNaN(d)) {
     const y = d.getFullYear(), mo = String(d.getMonth() + 1).padStart(2, '0'), da = String(d.getDate()).padStart(2, '0');
@@ -103,15 +110,45 @@ const delExtra = i => mut(d => d.extra.splice(i, 1));
 const closeDay = () => mut(d => d.closed = d.closed == 'true' ? 'false' : 'true');
 const addExtra = () => modal('Прочий штраф', [{ k: 'text', l: 'За что' }, { k: 'pts', l: 'Баллы', t: 'number' }], o => { if (!o.text) fail('Укажите, за что'); return mut(d => d.extra.push({ text: o.text, points: -Math.abs(Number(o.pts) || 0) })); });
 const bon = id => D.bonuses.find(b => b.id == id);
+
+/* Принять бонус с указанным баллом */
 const approveWithPoints = (id, pts) => act(async () => {
   const b = bon(id), p = periods().find(x => x.id == b.periodId), d = getDay(p, ymd(b.date));
   const pt = Number(pts ?? b.points);
+  // Проверка: бонус ещё не принят
+  if (b.status === 'ok') fail('Бонус уже принят');
+  // Добавляем в день
   d.bonuses.push({ id, text: b.text, points: pt });
   await saveDay(p, d);
+  // Обновляем бонус: статус ok, но points остаётся предложенным
   await post('save', 'bonuses', { ...b, points: pt, status: 'ok' });
 });
 const okB = id => approveWithPoints(id);
-const editB = id => modal('Баллы бонуса', [{ k: 'pts', l: 'Баллы', t: 'number', v: bon(id).points }], o => approveWithPoints(id, Number(o.pts)));
+
+/* Изменить балл бонуса БЕЗ принятия */
+const editB = id => {
+  const b = bon(id);
+  modal('Изменить баллы', [{ k: 'pts', l: 'Баллы', t: 'number', v: b.points }], async o => {
+    const pt = Number(o.pts);
+    if (isNaN(pt) || pt <= 0) fail('Баллы должны быть больше 0');
+    // Меняем только points, статус не трогаем
+    await post('save', 'bonuses', { ...b, points: pt });
+  });
+};
+
+/* Отменить принятие бонуса */
+const undoB = id => act(async () => {
+  const b = bon(id);
+  if (b.status !== 'ok') fail('Бонус не принят');
+  const p = periods().find(x => x.id == b.periodId);
+  const d = getDay(p, ymd(b.date));
+  // Удаляем бонус из дня
+  d.bonuses = d.bonuses.filter(x => x.id !== id);
+  await saveDay(p, d);
+  // Возвращаем бонус в статус new
+  await post('save', 'bonuses', { ...b, status: 'new' });
+}, 'Бонус отменён');
+
 const noB = id => act(() => post('save', 'bonuses', { ...bon(id), status: 'no' }));
 const nst = (id, st) => act(() => post('save', 'notifications', { ...D.notifications.find(n => n.id == id), status: st }));
 
@@ -170,7 +207,7 @@ function renderDaySummary(p, d) {
   });
 
   d.bonuses.forEach(b => {
-    items.push(`<div class="line"><span class="grow">⭐ ${esc(b.text)}</span><b style="color:var(--ok)">+${b.points}</b></div>`);
+    items.push(`<div class="line"><span class="grow">⭐ ${esc(b.text)}</span><b style="color:var(--ok)">+${b.points}</b><a onclick="undoB('${b.id}')">×</a></div>`);
   });
 
   if (items.length === 0) {
@@ -188,11 +225,30 @@ const P = {
 <div class="card">${ms.map(m => `<label class="line chk"><input type="checkbox" ${d.penalties.includes(m.id) ? 'checked' : ''} onchange="tog('${m.id}')"><span class="grow">${esc(m.icon || '')} ${esc(m.name)}</span><b>${m.points}</b></label>`).join('')}
 ${d.extra.map((x, i) => `<div class="line"><span class="grow">${esc(x.text)}</span><b>${x.points}</b><a onclick="delExtra(${i})">✕</a></div>`).join('')}
 <div class="row"><button class="sec" onclick="addExtra()">+ Прочий штраф</button></div></div>
-${d.bonuses.length ? `<div class="card">${d.bonuses.map(b => `<div class="line"><span class="grow">⭐ ${esc(b.text)}</span><b>+${b.points}</b></div>`).join('')}</div>` : ''}
+${d.bonuses.length ? `<div class="card">${d.bonuses.map(b => `<div class="line"><span class="grow">⭐ ${esc(b.text)}</span><b>+${b.points}</b><a onclick="undoB('${b.id}')">×</a></div>`).join('')}</div>` : ''}
 <p class="tot">Итог дня: ${tot} ${d.closed == 'true' ? '✔' : ''}</p><button onclick="closeDay()">${d.closed == 'true' ? 'Открыть день' : 'Закрыть день'}</button>
 ${renderDaySummary(p, d)}`;
   },
-  bonus() { const b = pendB(); return b.length ? b.map(x => `<div class="card">${esc(ymd(x.date))}: ${esc(x.text)} <b>+${x.points}</b><div class="row"><button onclick="okB('${x.id}')">Принять</button><button class="sec" onclick="editB('${x.id}')">Изменить</button><button class="sec" onclick="noB('${x.id}')">Отклонить</button></div></div>`).join('') : '<p>Нет предложений</p>'; },
+  bonus() {
+    const b = pendB();
+    const all = (D.bonuses || []).filter(x => x.childId == S.child);
+    const accepted = all.filter(x => x.status == 'ok');
+    const rejected = all.filter(x => x.status == 'no');
+
+    let html = '';
+    if (b.length) {
+      html += `<h4>Новые предложения</h4>` + b.map(x => `<div class="card">${esc(ddmm(x.date))}: ${esc(x.text)} <b>+${x.points}</b><div class="row"><button onclick="okB('${x.id}')">Принять</button><button class="sec" onclick="editB('${x.id}')">Изменить</button><button class="sec" onclick="noB('${x.id}')">Отклонить</button></div></div>`).join('');
+    } else {
+      html += '<p>Нет новых предложений</p>';
+    }
+    if (accepted.length) {
+      html += `<h4>Принятые</h4>` + accepted.map(x => `<div class="card">${esc(ddmm(x.date))}: ${esc(x.text)} <b>+${x.points}</b><div class="row"><button class="sec" onclick="undoB('${x.id}')">↩ Отменить</button></div></div>`).join('');
+    }
+    if (rejected.length) {
+      html += `<h4>Отклонённые</h4>` + rejected.map(x => `<div class="card" style="opacity:0.6">${esc(ddmm(x.date))}: ${esc(x.text)} <b>+${x.points}</b></div>`).join('');
+    }
+    return html;
+  },
   notes(k) { const n = pendN(); return n.length ? n.map(x => `<div class="card">🎉 ${esc(k.name)} справилась с целью! (${x.status == 'later' ? 'отложено' : 'новое'})<div class="row"><button onclick="nst('${x.id}','ok')">Подтвердить</button><button class="sec" onclick="nst('${x.id}','later')">Отложить</button><button class="sec" onclick="nst('${x.id}','no')">Отклонить</button></div></div>`).join('') : '<p>Нет уведомлений</p>'; },
   set(k, p) {
     return `<div class="card"><b>${esc(k.name)}</b>: база ${k.base}, флор ${k.floor}<div class="row"><button class="sec" onclick="editKid()">Изменить</button><button class="sec" onclick="hideKid()">Скрыть</button></div><p>Ссылка ребёнка:<code>${esc(location.origin + location.pathname)}?child=${esc(k.id)}</code></p></div>
@@ -229,7 +285,7 @@ const sendBonus = () => modal('Что ты сделала сверх нормы?
 });
 const imDone = () => act(() => post('save', 'notifications', { id: uid(), childId: S.child, periodId: active().id, status: 'new', created: today() }), 'Родитель получил сообщение!');
 
-/* ===== Таблица нарушений ребёнка ===== */
+/* ===== Таблица нарушений ребёнка (полученных) ===== */
 function renderChildPenalties(p) {
   const ds = days(p).filter(d => {
     const pens = J(d.penalties, []);
@@ -276,6 +332,24 @@ function renderChildPenalties(p) {
 </div>`;
 }
 
+/* ===== Свёрнутый блок справочника нарушений ===== */
+function renderChildCatalog(p) {
+  const ms = mets(p).sort((a, b) => Number(b.points) - Number(a.points));
+  const rows = ms.map(m => `<tr>
+    <td style="text-align:center;font-size:18px">${esc(m.icon || '')}</td>
+    <td>${esc(m.name)}</td>
+    <td style="text-align:right;color:var(--bad);font-weight:600">${m.points}</td>
+  </tr>`).join('');
+
+  return `<details class="card" style="cursor:pointer">
+    <summary style="font-weight:600;font-size:16px;padding:4px 0">📖 Показать все штрафы</summary>
+    <table class="pen-table" style="margin-top:10px">
+      <thead><tr><th style="text-align:center">Эмодзи</th><th>Название</th><th style="text-align:right">Баллы</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </details>`;
+}
+
 function renderChild() {
   const k = kid(), p = active();
   if (!k) { $('#app').innerHTML = '<p class="err">Ребёнок не найден</p>'; return; }
@@ -291,7 +365,9 @@ function renderChild() {
 ${prog(p)}
 ${s >= Number(p.goal) && !notified ? '<button onclick="imDone()">🎉 Я справилась!</button>' : ''}
 ${renderChildPenalties(p)}
-<h4>Календарь</h4><div class="cal">${cells.join('')}</div><p><button onclick="sendBonus()">⭐ Предложить бонус</button></p>`;
+<h4>Календарь</h4><div class="cal">${cells.join('')}</div>
+<p><button onclick="sendBonus()">⭐ Предложить бонус</button></p>
+${renderChildCatalog(p)}`;
 }
 
 /* ===== Точка входа ===== */
